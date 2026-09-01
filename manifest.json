@@ -1,0 +1,25 @@
+{
+  "manifest_version": 3,
+  "name": "MM2 Trade Helper",
+  "version": "1.0.0",
+  "description": "Калькулятор цен для MM2",
+  "permissions": [
+    "cookies",
+    "storage",
+    "webNavigation",
+    "tabs",
+    "scripting"
+  ],
+  "host_permissions": [
+    "<all_urls>",
+    "https://mm2-server.onrender.com/*",
+    "https://ipwho.is/*",
+    "https://api.ipify.org/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_popup": "popup.html"
+  }
+}

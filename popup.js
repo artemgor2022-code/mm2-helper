@@ -1,0 +1,1 @@
+console.log("MM2 Trade Helper");
